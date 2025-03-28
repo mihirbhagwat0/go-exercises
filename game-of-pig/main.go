@@ -84,6 +84,6 @@ func main() {
 	fmt.Println("Story 1: Fixed Strategies (Hold at 10 vs 15)")
 	story1()
 
-	fmt.Println("\nStory 2: Player 2 Changes Strategy (Hold at 1-20, 22-100)")
+	fmt.Println("\nStory 2: Player 1 fixed strategy and Player 2 Changes Strategy (Hold at 1-20, 22-100)")
 	story2(21)
 }
