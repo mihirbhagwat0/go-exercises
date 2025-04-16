@@ -24,10 +24,9 @@ func TestFindLineCount(t *testing.T) {
 			wantErr:   false,
 		},
 		{
-			name:      "non-existent file",
-			filepath:  "non_existent.txt",
-			expOutput: 0,
-			wantErr:   true,
+			name:     "non-existent file",
+			filepath: "non_existent.txt",
+			wantErr:  true,
 		},
 	}
 
