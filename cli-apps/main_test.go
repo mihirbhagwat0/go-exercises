@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/fs"
 	"testing"
 )
 
@@ -24,11 +25,12 @@ func TestFindLineCount(t *testing.T) {
 			expOutput: 0,
 			wantErr:   false,
 		},
-		// {
-		// 	name:     "non-existent file",
-		// 	filepath: "non_existent.txt",
-		// 	wantErr:  true,
-		// },
+		{
+			name:     "non-existent file",
+			filepath: "non_existent.txt",
+			wantErr:  true,
+			expErr:   fs.ErrNotExist,
+		},
 	}
 
 	for _, tt := range fileMap {
