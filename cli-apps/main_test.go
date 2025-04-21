@@ -1,56 +1,96 @@
 package main
 
 import (
-	"io/fs"
+	"os"
 	"testing"
 )
 
-func TestFindLineCount(t *testing.T) {
-	fileMap := []struct {
-		name      string
-		filepath  string
-		expOutput int
-		wantErr   bool
-		expErr    error
+func createTempFile(t *testing.T, content string) string {
+	t.Helper()
+	tmpFile, err := os.CreateTemp("", "testfile*.txt")
+	if err != nil {
+		t.Fatalf("Error creating temp file: %v", err)
+	}
+	if _, err := tmpFile.WriteString(content); err != nil {
+		t.Fatalf("Could not write to temp file: %v", err)
+	}
+	tmpFile.Close()
+	return tmpFile.Name()
+}
+
+func readFileContent(t *testing.T, filePath string) string {
+	t.Helper()
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read test file: %v", err)
+	}
+	return string(data)
+}
+
+func TestCountLines(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		expected int
 	}{
-		{
-			name:      "valid file with 2 lines",
-			filepath:  "test.txt",
-			expOutput: 2,
-			wantErr:   false,
-		},
-		{
-			name:      "empty file",
-			filepath:  "empty_file.txt",
-			expOutput: 0,
-			wantErr:   false,
-		},
-		{
-			name:     "non-existent file",
-			filepath: "non_existent.txt",
-			wantErr:  true,
-			expErr:   fs.ErrNotExist,
-		},
+		{"Empty file", "", 0},
+		{"One line", "Hello, World!", 0},
+		{"Multiple lines", "Line 1\nLine 2\nLine 3\n", 2},
 	}
 
-	for _, tt := range fileMap {
-		t.Run(tt.name, func(t *testing.T) {
-			gotCount, gotErr := FindLineCount(tt.filepath)
-
-			if tt.wantErr {
-				if gotErr == nil {
-					t.Fatalf("Epected error but got nil")
-				}
-
-				if tt.expErr != gotErr {
-					t.Errorf("Expected %v but got %v", tt.expErr, gotErr)
-				}
-
-				return
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := createTempFile(t, tc.content)
+			defer os.Remove(path)
+			got := countLines(readFileContent(t, path))
+			if got != tc.expected {
+				t.Errorf("Expected %d lines, got %d", tc.expected, got)
 			}
+		})
+	}
+}
 
-			if tt.expOutput != gotCount {
-				t.Errorf("Expected %v but got %v", tt.expOutput, gotCount)
+func TestCountWords(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		expected int
+	}{
+		{"Empty file", "", 0},
+		{"One line with multiple words", "Hello World from Go", 4},
+		{"Multiple lines", "First line\nSecond line\nThird line", 6},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := createTempFile(t, tc.content)
+			//defer os.Remove(path)
+			got := countWords(readFileContent(t, path))
+			if got != tc.expected {
+				t.Errorf("Expected %d words, got %d", tc.expected, got)
+			}
+		})
+	}
+}
+
+func TestCountChars(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		expected int
+	}{
+		{"Empty file", "", 0},
+		{"ASCII text", "Hello", 5},
+		{"Unicode text", "अअअअअअ", 6},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := createTempFile(t, tc.content)
+			defer os.Remove(path)
+			got := countChars(readFileContent(t, path))
+			if got != tc.expected {
+				t.Errorf("Expected %d characters, got %d", tc.expected, got)
 			}
 		})
 	}
