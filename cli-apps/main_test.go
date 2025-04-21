@@ -64,7 +64,7 @@ func TestCountWords(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			path := createTempFile(t, tc.content)
-			//defer os.Remove(path)
+			defer os.Remove(path)
 			got := countWords(readFileContent(t, path))
 			if got != tc.expected {
 				t.Errorf("Expected %d words, got %d", tc.expected, got)

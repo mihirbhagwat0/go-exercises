@@ -6,45 +6,79 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode/utf8"
 )
 
 func main() {
-	linesFlag := flag.Bool("l", false, "Count lines")
-	wordsFlag := flag.Bool("w", false, "Count words")
-	charsFlag := flag.Bool("c", false, "Count characters")
-	flag.Parse()
+	linesFlag, wordsFlag, charsFlag, filePath := parseFlags()
 
-	if flag.NArg() == 0 {
-		fmt.Fprintln(os.Stderr, "Please provide a file path")
-		os.Exit(1)
-	}
-
-	filePath := flag.Arg(0)
-	content, err := os.ReadFile(filePath)
+	content, err := validateFile(filePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
 		os.Exit(1)
 	}
 
 	text := string(content)
-	lines := countLines(text)
-	words := countWords(text)
-	chars := countChars(text)
+	printCounts(text, filePath, linesFlag, wordsFlag, charsFlag)
+}
 
-	// If no flag is set, show all counts (default wc behavior)
-	if !*linesFlag && !*wordsFlag && !*charsFlag {
-		*linesFlag, *wordsFlag, *charsFlag = true, true, true
+func validateFile(filePath string) (string, error) {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		if os.IsPermission(err) {
+			fmt.Fprintf(os.Stderr, "wc: %s: Permission denied\n", filePath)
+		} else {
+			fmt.Fprintf(os.Stderr, "wc: %s: %v\n", filePath, err)
+		}
+		os.Exit(1)
 	}
 
-	// Print in wc-style right-aligned format
-	if *linesFlag {
-		fmt.Printf("%8d", lines)
+	if info.IsDir() {
+		fmt.Fprintf(os.Stderr, "wc: %s: read: Is a directory\n", filePath)
+		os.Exit(1)
 	}
-	if *wordsFlag {
-		fmt.Printf("%8d", words)
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsPermission(err) {
+			fmt.Fprintf(os.Stderr, "wc: %s: Permission denied\n", filePath)
+		} else {
+			fmt.Fprintf(os.Stderr, "wc: %s: %v\n", filePath, err)
+		}
+		os.Exit(1)
 	}
-	if *charsFlag {
-		fmt.Printf("%8d", chars)
+
+	return string(content), nil
+}
+
+func parseFlags() (linesFlag, wordsFlag, charsFlag bool, filePath string) {
+	lFlag := flag.Bool("l", false, "Count lines")
+	wFlag := flag.Bool("w", false, "Count words")
+	cFlag := flag.Bool("c", false, "Count characters")
+	flag.Parse()
+
+	if flag.NArg() == 0 {
+		fmt.Fprintln(os.Stderr, "Please provide a file path")
+		os.Exit(1)
+	}
+	filePath = flag.Arg(0)
+
+	if !*lFlag && !*wFlag && !*cFlag {
+		*lFlag, *wFlag, *cFlag = true, true, true
+	}
+
+	return *lFlag, *wFlag, *cFlag, filePath
+}
+
+func printCounts(text, filePath string, linesFlag, wordsFlag, charsFlag bool) {
+	if linesFlag {
+		fmt.Printf("%8d", countLines(text))
+	}
+	if wordsFlag {
+		fmt.Printf("%8d", countWords(text))
+	}
+	if charsFlag {
+		fmt.Printf("%8d", countChars(text))
 	}
 	fmt.Printf(" %s\n", filePath)
 }
@@ -66,5 +100,5 @@ func countWords(text string) int {
 }
 
 func countChars(text string) int {
-	return len([]rune(text))
+	return utf8.RuneCountInString(text)
 }
