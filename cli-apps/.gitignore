@@ -8,6 +8,7 @@
 *.so
 *.dylib
 wc
+cli-apps/cliapp-wc-amd64
 # Test binary, built with `go test -c`
 *.test
 

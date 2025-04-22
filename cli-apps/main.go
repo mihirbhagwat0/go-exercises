@@ -10,19 +10,69 @@ import (
 )
 
 func main() {
-	linesFlag, wordsFlag, charsFlag, filePath := parseFlags()
+	linesFlag, wordsFlag, charsFlag, filePaths := parseFlags()
+	fileContents := validateFiles(filePaths)
 
-	content, err := validateFile(filePath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
+	var totalLines, totalWords, totalChars int
+
+	for path, content := range fileContents {
+		printCounts(content, path, linesFlag, wordsFlag, charsFlag)
+
+		if linesFlag {
+			totalLines += countLines(content)
+		}
+		if wordsFlag {
+			totalWords += countWords(content)
+		}
+		if charsFlag {
+			totalChars += countChars(content)
+		}
+	}
+
+	if len(fileContents) > 1 {
+		if linesFlag {
+			fmt.Printf("%8d", totalLines)
+		}
+		if wordsFlag {
+			fmt.Printf("%8d", totalWords)
+		}
+		if charsFlag {
+			fmt.Printf("%8d", totalChars)
+		}
+		fmt.Printf(" total\n")
+	}
+}
+
+func parseFlags() (linesFlag, wordsFlag, charsFlag bool, filePaths []string) {
+	lFlag := flag.Bool("l", false, "Count lines")
+	wFlag := flag.Bool("w", false, "Count words")
+	cFlag := flag.Bool("c", false, "Count characters")
+	flag.Parse()
+	filePaths = flag.Args()
+	if flag.NArg() == 0 {
+		fmt.Fprintln(os.Stderr, "Please provide a file path")
 		os.Exit(1)
 	}
 
-	text := string(content)
-	printCounts(text, filePath, linesFlag, wordsFlag, charsFlag)
+	if !*lFlag && !*wFlag && !*cFlag {
+		*lFlag, *wFlag, *cFlag = true, true, true
+	}
+
+	return *lFlag, *wFlag, *cFlag, filePaths
 }
 
-func validateFile(filePath string) (string, error) {
+func validateFiles(filePaths []string) map[string]string {
+	results := make(map[string]string)
+	for _, path := range filePaths {
+		content, ok := checkFileValid(path)
+		if ok {
+			results[path] = content
+		}
+	}
+	return results
+}
+
+func checkFileValid(filePath string) (string, bool) {
 	info, err := os.Stat(filePath)
 	if err != nil {
 		if os.IsPermission(err) {
@@ -30,12 +80,12 @@ func validateFile(filePath string) (string, error) {
 		} else {
 			fmt.Fprintf(os.Stderr, "wc: %s: %v\n", filePath, err)
 		}
-		os.Exit(1)
+		return "", false
 	}
 
 	if info.IsDir() {
 		fmt.Fprintf(os.Stderr, "wc: %s: read: Is a directory\n", filePath)
-		os.Exit(1)
+		return "", false
 	}
 
 	content, err := os.ReadFile(filePath)
@@ -45,29 +95,10 @@ func validateFile(filePath string) (string, error) {
 		} else {
 			fmt.Fprintf(os.Stderr, "wc: %s: %v\n", filePath, err)
 		}
-		os.Exit(1)
+		return "", false
 	}
 
-	return string(content), nil
-}
-
-func parseFlags() (linesFlag, wordsFlag, charsFlag bool, filePath string) {
-	lFlag := flag.Bool("l", false, "Count lines")
-	wFlag := flag.Bool("w", false, "Count words")
-	cFlag := flag.Bool("c", false, "Count characters")
-	flag.Parse()
-
-	if flag.NArg() == 0 {
-		fmt.Fprintln(os.Stderr, "Please provide a file path")
-		os.Exit(1)
-	}
-	filePath = flag.Arg(0)
-
-	if !*lFlag && !*wFlag && !*cFlag {
-		*lFlag, *wFlag, *cFlag = true, true, true
-	}
-
-	return *lFlag, *wFlag, *cFlag, filePath
+	return string(content), true
 }
 
 func printCounts(text, filePath string, linesFlag, wordsFlag, charsFlag bool) {
